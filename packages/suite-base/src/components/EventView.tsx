@@ -5,7 +5,9 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
-import { alpha } from "@mui/material";
+import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
+import { alpha, IconButton } from "@mui/material";
 import * as _ from "lodash-es";
 import { Fragment } from "react";
 import { makeStyles } from "tss-react/mui";
@@ -16,12 +18,13 @@ import {
   DataSourceEvent,
 } from "@lichtblick/suite-base/context/EventsContext";
 
-const useStyles = makeStyles<void, "eventMetadata" | "eventSelected">()(
+const useStyles = makeStyles<void, "eventMetadata" | "eventSelected" | "actionButtons">()(
   (theme, _params, classes) => ({
     spacer: {
       cursor: "default",
       height: theme.spacing(1),
       gridColumn: "span 2",
+      position: "relative",
     },
     event: {
       display: "contents",
@@ -70,6 +73,15 @@ const useStyles = makeStyles<void, "eventMetadata" | "eventSelected">()(
         borderBottomLeftRadius: theme.shape.borderRadius,
       },
     },
+    actionButtons: {
+      position: "absolute",
+      right: 0,
+      bottom: 0,
+      display: "flex",
+      backgroundColor: theme.palette.background.default,
+      borderTopLeftRadius: theme.shape.borderRadius,
+      zIndex: 1,
+    },
   }),
 );
 
@@ -109,9 +121,21 @@ function EventViewComponent(params: {
   onClick: (event: TimelinePositionedEvent) => void;
   onHoverStart: (event: TimelinePositionedEvent) => void;
   onHoverEnd: (event: TimelinePositionedEvent) => void;
+  onEdit?: (event: TimelinePositionedEvent) => void;
+  onDelete?: (event: TimelinePositionedEvent) => void;
 }): React.JSX.Element {
-  const { event, filter, formattedTime, isHovered, isSelected, onClick, onHoverStart, onHoverEnd } =
-    params;
+  const {
+    event,
+    filter,
+    formattedTime,
+    isHovered,
+    isSelected,
+    onClick,
+    onHoverStart,
+    onHoverEnd,
+    onEdit,
+    onDelete,
+  } = params;
   const { classes, cx } = useStyles();
 
   const fields = _.compact([
@@ -147,7 +171,34 @@ function EventViewComponent(params: {
           </div>
         </Fragment>
       ))}
-      <div className={classes.spacer} />
+      <div className={classes.spacer}>
+        {(isHovered || isSelected) && (
+          <div className={classes.actionButtons}>
+            {onEdit && (
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(event);
+                }}
+              >
+                <EditIcon fontSize="small" />
+              </IconButton>
+            )}
+            {onDelete && (
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(event);
+                }}
+              >
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

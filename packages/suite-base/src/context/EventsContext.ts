@@ -66,6 +66,26 @@ export type EventsStore = Immutable<{
   /** The active device under which new events should be created. */
   deviceId: string | undefined;
 
+  /** Create an event locally. */
+  createEvent?: (args: {
+    deviceId: string;
+    timestamp: string;
+    durationNanos: string;
+    metadata: Record<string, string>;
+  }) => Promise<void>;
+
+  /** Edit an existing event. */
+  editEvent?: (event: DataSourceEvent) => Promise<void>;
+
+  /** Delete an event by id. */
+  deleteEvent?: (eventId: string) => Promise<void>;
+
+  /** Import events from JSON data. */
+  importEvents?: (events: DataSourceEvent[]) => Promise<void>;
+
+  /** Export all events for the current device. */
+  exportEvents?: () => Promise<DataSourceEvent[]>;
+
   /** Refreshes events from api. */
   refreshEvents: () => void;
 

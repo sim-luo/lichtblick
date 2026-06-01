@@ -64,7 +64,6 @@ import {
 } from "@lichtblick/suite-base/context/CurrentLayoutContext";
 import {
   useCurrentUser,
-  useCurrentUserType,
 } from "@lichtblick/suite-base/context/CurrentUserContext";
 import { EventsStore, useEvents } from "@lichtblick/suite-base/context/EventsContext";
 import { usePlayerSelection } from "@lichtblick/suite-base/context/PlayerSelectionContext";
@@ -186,8 +185,6 @@ function WorkspaceContent(props: WorkspaceProps): React.JSX.Element {
   // We use playerId to detect when a player changes for RemountOnValueChange below
   // see comment below above the RemountOnValueChange component
   const playerId = useMessagePipeline(selectPlayerId);
-
-  const currentUserType = useCurrentUserType();
 
   useDefaultWebLaunchPreference();
 
@@ -373,7 +370,7 @@ function WorkspaceContent(props: WorkspaceProps): React.JSX.Element {
   ]);
 
   const eventsSupported = useEvents(selectEventsSupported);
-  const showEventsTab = currentUserType !== "unauthenticated" && eventsSupported;
+  const showEventsTab = eventsSupported;
 
   const leftSidebarItems = useMemo(() => {
     const items = new Map<LeftSidebarItemKey, SidebarItem>([

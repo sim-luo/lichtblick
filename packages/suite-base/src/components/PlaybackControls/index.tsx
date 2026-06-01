@@ -46,7 +46,6 @@ import { useStyles } from "@lichtblick/suite-base/components/PlaybackControls/in
 import { useDirectionalSeek } from "@lichtblick/suite-base/components/PlaybackControls/useDirectionalSeek";
 import PlaybackSpeedControls from "@lichtblick/suite-base/components/PlaybackSpeedControls";
 import Stack from "@lichtblick/suite-base/components/Stack";
-import { useCurrentUser } from "@lichtblick/suite-base/context/BaseUserContext";
 import { EventsStore, useEvents } from "@lichtblick/suite-base/context/EventsContext";
 import {
   WorkspaceContextStore,
@@ -86,7 +85,6 @@ export default function PlaybackControls({
   const { classes, cx } = useStyles();
   const repeat = useWorkspaceStore(selectPlaybackRepeat);
   const [createEventDialogOpen, setCreateEventDialogOpen] = useState(false);
-  const { currentUserType } = useCurrentUser();
   const eventsSupported = useEvents(selectEventsSupported);
 
   const {
@@ -157,7 +155,7 @@ export default function PlaybackControls({
         </div>
         <Stack direction="row" alignItems="center" flex={1} gap={1}>
           <Stack direction="row" alignItems="center" flex={1} gap={0.5}>
-            {currentUserType !== "unauthenticated" && eventsSupported && (
+            {eventsSupported && (
               <HoverableIconButton
                 size="small"
                 title="Create event"

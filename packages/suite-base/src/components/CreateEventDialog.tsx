@@ -32,14 +32,17 @@ import { makeStyles } from "tss-react/mui";
 import { useImmer } from "use-immer";
 
 import Log from "@lichtblick/log";
-import { toDate, toNanoSec } from "@lichtblick/rostime";
+import { add, fromDate, toDate, toNanoSec, toSec } from "@lichtblick/rostime";
 import {
   MessagePipelineContext,
   useMessagePipeline,
 } from "@lichtblick/suite-base/components/MessagePipeline";
 import Stack from "@lichtblick/suite-base/components/Stack";
-import { useAppContext } from "@lichtblick/suite-base/context/AppContext";
-import { EventsStore, useEvents } from "@lichtblick/suite-base/context/EventsContext";
+import {
+  DataSourceEvent,
+  EventsStore,
+  useEvents,
+} from "@lichtblick/suite-base/context/EventsContext";
 import { useAppTimeFormat } from "@lichtblick/suite-base/hooks";
 
 const log = Log.getLogger(__filename);
@@ -87,24 +90,45 @@ type KeyValue = { key: string; value: string };
 const selectCurrentTime = (ctx: MessagePipelineContext) => ctx.playerState.activeData?.currentTime;
 const selectRefreshEvents = (store: EventsStore) => store.refreshEvents;
 const selectDeviceId = (store: EventsStore) => store.deviceId;
+const selectCreateEvent = (store: EventsStore) => store.createEvent;
 
-export function CreateEventDialog(props: { onClose: () => void }): React.JSX.Element {
-  const { onClose } = props;
+export function CreateEventDialog(props: {
+  onClose: () => void;
+  editingEvent?: DataSourceEvent;
+}): React.JSX.Element {
+  const { onClose, editingEvent } = props;
 
   const { classes } = useStyles();
 
   const refreshEvents = useEvents(selectRefreshEvents);
   const currentTime = useMessagePipeline(selectCurrentTime);
+  const editEvent = useEvents((store) => store.editEvent);
+
   const [event, setEvent] = useImmer<{
     startTime: undefined | Date;
     duration: undefined | number;
     durationUnit: "sec" | "nsec";
     metadataEntries: KeyValue[];
-  }>({
-    startTime: currentTime ? toDate(currentTime) : undefined,
-    duration: 0,
-    durationUnit: "sec",
-    metadataEntries: [{ key: "", value: "" }],
+  }>(() => {
+    if (editingEvent) {
+      const durationNanos = BigInt(editingEvent.durationNanos);
+      const entries = Object.entries(editingEvent.metadata).map(([key, value]) => ({
+        key,
+        value,
+      }));
+      return {
+        startTime: toDate(editingEvent.startTime),
+        duration: Number(durationNanos),
+        durationUnit: "nsec" as const,
+        metadataEntries: entries.length > 0 ? entries : [{ key: "", value: "" }],
+      };
+    }
+    return {
+      startTime: currentTime ? toDate(currentTime) : new Date(),
+      duration: undefined,
+      durationUnit: "sec" as const,
+      metadataEntries: [{ key: "", value: "" }],
+    };
   });
 
   const updateMetadata = useCallback(
@@ -129,7 +153,7 @@ export function CreateEventDialog(props: { onClose: () => void }): React.JSX.Ele
   );
 
   const { formatTime } = useAppTimeFormat();
-  const { createEvent: appModuleCreateEvent } = useAppContext();
+  const eventsCreateEvent = useEvents(selectCreateEvent);
 
   const countedMetadata = _.countBy(event.metadataEntries, (kv) => kv.key);
   const duplicateKey = Object.entries(countedMetadata).find(
@@ -151,20 +175,35 @@ export function CreateEventDialog(props: { onClose: () => void }): React.JSX.Ele
       filteredMeta.map((entry) => [entry.key.trim(), entry.value.trim()]),
     );
 
-    await appModuleCreateEvent?.({
-      deviceId,
-      timestamp: event.startTime.toISOString(),
-      durationNanos: toNanoSec(
-        event.durationUnit === "sec"
-          ? { sec: event.duration, nsec: 0 }
-          : { sec: 0, nsec: event.duration },
-      ).toString(),
-      metadata: keyedMetadata,
-    });
+    const duration =
+      event.durationUnit === "sec"
+        ? { sec: event.duration, nsec: 0 }
+        : { sec: 0, nsec: event.duration };
+
+    const durationNanos = toNanoSec(duration).toString();
+
+    if (editingEvent && editEvent) {
+      const endTime = add(editingEvent.startTime, duration);
+      await editEvent({
+        ...editingEvent,
+        endTime,
+        endTimeInSeconds: toSec(endTime),
+        timestampNanos: toNanoSec(fromDate(event.startTime)).toString(),
+        durationNanos,
+        metadata: keyedMetadata,
+      });
+    } else if (eventsCreateEvent) {
+      await eventsCreateEvent({
+        deviceId,
+        timestamp: event.startTime.toISOString(),
+        durationNanos,
+        metadata: keyedMetadata,
+      });
+    }
 
     onClose();
     refreshEvents();
-  }, [appModuleCreateEvent, deviceId, event, onClose, refreshEvents]);
+  }, [eventsCreateEvent, editEvent, editingEvent, deviceId, event, onClose, refreshEvents]);
 
   const onMetaDataKeyDown = useCallback(
     (keyboardEvent: KeyboardEvent) => {
@@ -197,11 +236,11 @@ export function CreateEventDialog(props: { onClose: () => void }): React.JSX.Ele
     [setEvent],
   );
 
-  const formattedStartTime = currentTime ? formatTime(currentTime) : "-";
+  const formattedStartTime = event.startTime ? formatTime(fromDate(event.startTime)) : "-";
 
   return (
     <Dialog open onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>Create event</DialogTitle>
+      <DialogTitle>{editingEvent ? "Edit Event" : "Create Event"}</DialogTitle>
       <DialogContent>
         <div className={classes.grid}>
           <FormControl>
@@ -331,7 +370,7 @@ export function CreateEventDialog(props: { onClose: () => void }): React.JSX.Ele
           {createdEvent.loading && (
             <CircularProgress color="inherit" size="1rem" style={{ marginRight: "0.5rem" }} />
           )}
-          Create Event
+          {editingEvent ? "Save" : "Create"}
         </Button>
       </DialogActions>
     </Dialog>
