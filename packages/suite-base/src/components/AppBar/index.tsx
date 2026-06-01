@@ -43,6 +43,7 @@ import { AppMenu } from "./AppMenu";
 import { CustomWindowControls, CustomWindowControlsProps } from "./CustomWindowControls";
 import { DataSource } from "./DataSource";
 import { NetworkStatusIndicator } from "./NetworkStatusIndicator";
+import { RecordingButtons } from "./RecordingButtons";
 import { SettingsMenu } from "./SettingsMenu";
 
 const useStyles = makeStyles<{ debugDragRegion?: boolean }, "avatar">()((
@@ -102,6 +103,9 @@ const useStyles = makeStyles<{ debugDragRegion?: boolean }, "avatar">()((
       justifySelf: "center",
       overflow: "hidden",
       maxWidth: "100%",
+      display: "flex",
+      alignItems: "center",
+      gap: theme.spacing(1),
       ...NOT_DRAGGABLE_STYLE, // make buttons clickable for desktop app
     },
     end: {
@@ -255,6 +259,7 @@ export function AppBar(props: AppBarProps): React.JSX.Element {
 
           <div className={classes.middle}>
             <DataSource />
+            <RecordingButtons />
           </div>
 
           <div className={classes.end}>
